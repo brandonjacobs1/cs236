@@ -24,6 +24,10 @@ private:
 public:
     Scanner() : line(1) { }
 
+    vector<Token> getTokens() {
+        return tokens;
+    }
+
     vector<Token> scan(const string& fileName) {
         ifstream infile(fileName);
         if (infile.is_open()) {
@@ -33,7 +37,7 @@ public:
             infile.close();
         }
 
-        for (int i=0; i < input.length(); i++) {
+        for (size_t i=0; i < input.length(); i++) {
             char c = input[i];
             if (c == '\n') {
                 line++;

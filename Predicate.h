@@ -16,7 +16,9 @@ private:
     vector<Parameter> parameters;
 public:
     explicit Predicate(string value): name(std::move(value)){}
-
+    string getName() {
+        return name;
+    }
     void addParameter (const Parameter& newParam) {
         parameters.push_back(newParam);
     }

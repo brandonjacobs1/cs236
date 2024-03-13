@@ -5,7 +5,7 @@
 #ifndef CS236_PARSER_H
 #define CS236_PARSER_H
 
-#include "../Scan/Token.h"
+#include "Token.h"
 #include <utility>
 #include <vector>
 #include "DatalogProgram.h"
@@ -24,6 +24,9 @@ public:
     }
     void advanceToken() {
         tokens.erase(tokens.begin());
+    }
+    DatalogProgram getProgram() {
+        return program;
     }
     class ParserException : public std::exception {
     public:
@@ -45,14 +48,7 @@ public:
     }
 
     DatalogProgram parse() {
-        bool isSuccessfulParse = datalogProgram();
-        if (isSuccessfulParse) {
-            cout << "Success!" << endl;
-            cout << program.toString() << endl;
-        } else {
-            cout << "Failure!" << endl;
-            cout << tokens.at(0).toString() << endl;
-        }
+        datalogProgram();
         return program;
     }
 

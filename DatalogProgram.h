@@ -19,16 +19,16 @@ private:
 public:
     DatalogProgram() = default;
 
-    [[nodiscard]] const vector<Predicate> &getSchemes() const {
+    vector<Predicate> getSchemes() const {
         return schemes;
     }
-    [[nodiscard]] const vector<Predicate> &getFacts() const {
+    vector<Predicate> getFacts() const {
         return facts;
     }
-    [[nodiscard]] const vector<Predicate> &getQueries() const {
+    vector<Predicate> getQueries() const {
         return queries;
     }
-    [[nodiscard]] const vector<Rule> &getRules() const {
+    vector<Rule> getRules() const {
         return rules;
     }
 

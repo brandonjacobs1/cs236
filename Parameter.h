@@ -8,7 +8,7 @@
 using namespace std;
 
 #include <string>
-#include "../Scan/Token.h"
+#include "Token.h"
 
 class Parameter {
 private:
@@ -21,13 +21,19 @@ public:
     string getValue() {
         return value;
     }
-    TokenType getType() {
+    TokenType getType() const {
         return type;
     }
-    string toString() {
+    string toString() const {
        return value;
     }
-    };
+    bool operator<(const Parameter& other) const {
+        return value < other.value;
+    }
+    bool operator==(const Parameter& other) const {
+        return value == other.value && type == other.type;
+    }
+};
 
 
 #endif //CS236_PARAMETER_H
