@@ -12,13 +12,27 @@
 class Interpreter {
     Database database;
     DatalogProgram datalogProgram;
+    stringstream ruleEvaluationOutput;
+    stringstream queryEvaluationOutput;
 
 public:
     Interpreter(const DatalogProgram& dp, const Database& db) {
         datalogProgram = dp;
         database = db;
         loadData();
-        query();
+    }
+
+    void run() {
+        ruleEvaluationOutput << "Rule Evaluation" << endl;
+        fixedPointRuleAlgorithm(datalogProgram.getRules());
+        cout << ruleEvaluationOutput.str();
+
+        queryEvaluationOutput << endl << "Query Evaluation" << endl;
+        for (Predicate query: datalogProgram.getQueries()) {
+            Relation relation = evaluateQuery(query);
+            queryToString(query, relation);
+        }
+        cout << queryEvaluationOutput.str();
     }
 private:
     void loadData() {
@@ -42,48 +56,100 @@ private:
         }
     }
     bool allConstants;
-    void query() {
-        for (Predicate query: datalogProgram.getQueries()) {
-            // select
-            Relation relation = database.select(query);
-            allConstants = true;
-            for (Parameter param : query.getParameters()) {
-                if (param.getType() == ID) {
-                    allConstants = false;
-                }
+    Relation evaluateQuery(Predicate query) {
+        // select
+        Relation relation = database.select(query);
+        allConstants = true;
+        for (Parameter param : query.getParameters()) {
+            if (param.getType() == ID) {
+                allConstants = false;
             }
-            if (!allConstants) {
-                // project
-                relation = database.project(query, relation);
-                // rename
-                relation = database.rename(query, relation);
-            }
-            printQuery(query, relation);
-
         }
+        if (!allConstants) {
+            // project
+            relation = database.project(query, relation);
+            // rename
+            relation = database.rename(query, relation);
+        }
+        return relation;
     }
-    void printQuery(Predicate query, Relation relation) {
-        cout << query.toString() << "? ";
+    void queryToString(Predicate query, Relation relation) {
+        queryEvaluationOutput << query.toString() << "? ";
         Tuple firstTuple = *(relation.getTuples().begin());
         if (!relation.getTuples().empty() && !firstTuple.empty()){
-            cout << "Yes(" << relation.getTuples().size() << ")" << endl;
+            queryEvaluationOutput << "Yes(" << relation.getTuples().size() << ")" << endl;
         } else {
-            cout << "No" << endl;
+            queryEvaluationOutput << "No" << endl;
         }
         Scheme scheme = relation.getScheme();
         if (scheme.empty() || allConstants) {
             return;
         }
         for (Tuple tuple : relation.getTuples()) {
-            cout << " ";
+            queryEvaluationOutput << "  ";
             for (size_t i = 0; i < scheme.size(); ++i) {
-                cout << scheme.at(i) << "=" << tuple.at(i);
+                queryEvaluationOutput << scheme.at(i) << "=" << tuple.at(i);
                 if (i < scheme.size() - 1) {
-                    cout << ", ";
+                    queryEvaluationOutput << ", ";
                 }
             }
-            cout << endl;
+            queryEvaluationOutput << endl;
         }
+    }
+
+    void evaluateRule(Rule rule) {
+        Predicate headPredicate = rule.getHeadPredicate();
+        vector<Predicate> predicateList = rule.getPredicateList();
+
+        vector<Relation> relations;
+        for (Predicate predicate : predicateList) {
+            Relation relation = evaluateQuery(predicate);
+            relations.push_back(relation);
+        }
+        Relation finalRelation = relations.at(0);
+        for (int i=1; i<relations.size(); i++) {
+            Relation rel = finalRelation.join(relations.at(i));
+            finalRelation = rel;
+        }
+
+        // Get indicies of head predicate params in final relation
+        vector<int> indicies = vector<int>();
+        vector<Parameter> headParams = headPredicate.getParameters();
+        for (size_t i=0; i<headParams.size(); i++) {
+            Parameter param = headParams.at(i);
+            for (size_t j=0; j<finalRelation.getScheme().size(); j++) {
+                if (param.toString() == finalRelation.getScheme().at(j)) {
+                    indicies.push_back(j);
+                    break;
+                }
+            }
+        }
+
+        Relation projected;
+        projected = finalRelation.project(indicies);
+        Relation renamed;
+        Relation existingRelation = database.findRelation(headPredicate.getName());
+        renamed = projected.rename(existingRelation.getScheme());
+        Relation existing = database.findRelation(headPredicate.getName());
+        Relation unionized = database.unionize(existing, renamed, ruleEvaluationOutput);
+        database.replaceRelation(unionized);
+    }
+
+    void fixedPointRuleAlgorithm(vector<Rule> rules) {
+        int numPreviousTuples;
+        int numTuples;
+        int numPasses = 0;
+        do {
+            numPreviousTuples = database.countTuples();
+            for (Rule rule : rules) {
+                ruleEvaluationOutput << rule.toString() << endl;
+                evaluateRule(rule);
+            }
+            numTuples = database.countTuples();
+            numPasses++;
+        } while (numTuples != numPreviousTuples);
+
+        ruleEvaluationOutput << endl << "Schemes populated after " << numPasses << " passes through the Rules." << endl;
     }
 };
 

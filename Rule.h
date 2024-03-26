@@ -22,6 +22,14 @@ public:
         predicateList.push_back(p);
     }
 
+    Predicate getHeadPredicate() {
+        return headPredicate;
+    }
+
+    vector<Predicate> getPredicateList() {
+        return predicateList;
+    }
+
     string toString() {
         stringstream ss;
         stringstream outer;
@@ -29,10 +37,10 @@ public:
             outer << predicateList[0].toString();
 
             for (size_t i = 1; i < predicateList.size(); ++i) {
-                outer << "," << predicateList[i].toString(); // Add ", " separator
+                outer << "," << predicateList[i].toString();
             }
         }
-        ss << headPredicate.toString() << " :- " << outer.str();
+        ss << headPredicate.toString() << " :- " << outer.str() << ".";
         return ss.str();
     }
 

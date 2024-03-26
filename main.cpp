@@ -1,6 +1,5 @@
 #include <iostream>
 #include "Scanner.h"
-#include <vector>
 #include "Parser.h"
 using namespace std;
 #include "Scheme.h"
@@ -15,4 +14,8 @@ int main(int argc, char** argv) {
     parser.parse();
     DatalogProgram program = parser.getProgram();
     Interpreter interpreter = Interpreter(program, Database());
+    interpreter.run();
+
+
+    return 0;
 }

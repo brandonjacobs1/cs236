@@ -35,7 +35,7 @@ public:
                 return relation;
             }
         }
-        return Relation();
+        return {};
     }
     Relation project(Predicate query, Relation relation) {
         vector<int> indicies = vector<int>();
@@ -98,6 +98,52 @@ public:
             }
         }
         return relation.rename(variables);
+    }
+
+    void replaceRelation(Relation relation) {
+        for (Relation currentRelation : relations) {
+            if (currentRelation.getName() == relation.getName()) {
+                relations.erase(currentRelation);
+                relations.insert(relation);
+                return;
+            }
+        }
+    }
+
+    Relation unionize(Relation firstRelation, Relation secondRelation, stringstream& output) {
+        Relation result = Relation(firstRelation.getName(), firstRelation.getScheme());
+        // check if the schemes are the same
+        if (firstRelation.getScheme().size() == secondRelation.getScheme().size()) {
+            for (int i = 0; i < secondRelation.getScheme().size(); i++) {
+                string firstValue = firstRelation.getScheme().at(i);
+                string secondValue = secondRelation.getScheme().at(i);
+                if (firstValue != secondValue) {
+                    return result;
+                }
+            }
+        } else {
+            return result;
+        }
+        for (Tuple tuple: firstRelation.getTuples()) {
+            result.addTuple(tuple);
+        }
+        for (Tuple tuple: secondRelation.getTuples()) {
+            int numTuples = result.getTuples().size();
+            result.addTuple(tuple);
+            int newNumTuples = result.getTuples().size();
+            if (numTuples != newNumTuples) {
+                output << "  " << tuple.toString(firstRelation.getScheme()) << endl;
+            }
+        }
+        return result;
+
+    }
+    int countTuples(){
+        int count = 0;
+        for (Relation relation : relations) {
+            count += relation.getTuples().size();
+        }
+        return count;
     }
 
 };
