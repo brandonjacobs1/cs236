@@ -13,4 +13,6 @@ add_executable(cs236 main.cpp
         Tuple.h
         Relation.h
         Database.h
-        Interpreter.h)
+        Interpreter.h
+        Node.h
+        Graph.h)

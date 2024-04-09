@@ -6,8 +6,12 @@
 #define CS236_INTERPRETER_H
 
 #include <map>
+#include <iostream>
 #include "Database.h"
 #include "DatalogProgram.h"
+#include "Graph.h"
+
+using namespace std;
 
 class Interpreter {
     Database database;
@@ -23,8 +27,43 @@ public:
     }
 
     void run() {
+        Graph graph = makeGraph(datalogProgram.getRules(), false);
+        cout << "Dependency Graph" << endl;
+        cout << graph.toString() << endl;
+
+        Graph reverseGraph = makeGraph(datalogProgram.getRules(), true);
+
+        stack<Node> postOrderStack = reverseGraph.dfs();
+        vector<vector<Node>> sccs = graph.scc(postOrderStack);
+
+
         ruleEvaluationOutput << "Rule Evaluation" << endl;
-        fixedPointRuleAlgorithm(datalogProgram.getRules());
+
+        for (vector<Node> scc : sccs) {
+            sort(scc.begin(), scc.end(), nodeSorter);
+            int ruleId = scc[0].getID();
+            ruleEvaluationOutput << "SCC: ";
+            sccToString(scc);
+            ruleEvaluationOutput << endl;
+            bool isSelf = isSelfLoop(datalogProgram.getRules().at(ruleId));
+            if (scc.size() == 1 && !isSelf){
+                Rule rule = datalogProgram.getRules().at(ruleId);
+                ruleEvaluationOutput << rule.toString() << endl;
+                evaluateRule(rule);
+                ruleEvaluationOutput << "1 passes: ";
+                sccToString(scc);
+                ruleEvaluationOutput << endl;
+            } else {
+                vector<Rule> rules;
+                for (Node node: scc) {
+                    int id = node.getID();
+                    rules.push_back(datalogProgram.getRules().at(id));
+                }
+                fixedPointRuleAlgorithm(rules);
+                sccToString(scc);
+                ruleEvaluationOutput << endl;
+            }
+        }
         cout << ruleEvaluationOutput.str();
 
         queryEvaluationOutput << endl << "Query Evaluation" << endl;
@@ -33,6 +72,62 @@ public:
             queryToString(query, relation);
         }
         cout << queryEvaluationOutput.str();
+    }
+    bool static nodeSorter(Node a, Node b) {
+        if (a.getID() < b.getID()) {
+            return true;
+        }
+        return false;
+    }
+
+    void sccToString (vector<Node> scc) {
+        for (int i=0; i<scc.size(); i++) {
+            ruleEvaluationOutput << "R" << scc.at(i).getID();
+            if (i < scc.size() - 1) {
+                ruleEvaluationOutput << ",";
+            }
+        }
+    }
+
+    bool isSelfLoop(Rule rule) {
+        Predicate headPredicate = rule.getHeadPredicate();
+            vector<Predicate> predicateList = rule.getPredicateList();
+            for (Predicate predicate : predicateList) {
+                if (predicate.getName() == headPredicate.getName()) {
+                    return true;
+                }
+            }
+        return false;
+    }
+
+    static Graph makeGraph(const vector<Rule>& rules, bool reverse) {
+        Graph graph(rules.size());
+
+        for (int i = 0; i < rules.size(); ++i) {
+            Rule rule = rules.at(i);
+            for (Predicate predicate : rule.getPredicateList()) {
+                for (int j = 0; j < rules.size(); ++j) {
+                    Rule newRule = rules.at(j);
+                    if (predicate.getName() == newRule.getHeadPredicate().getName()) {
+                        if(reverse) {
+                            graph.addEdge(j, i);
+                        } else {
+                            graph.addEdge(i, j);
+                        }
+                    } else {
+                        if(reverse) {
+                            graph.setID(j);
+                        } else {
+                            graph.setID(i);
+                        }
+                    }
+
+                }
+            }
+        }
+
+        return graph;
+
     }
 private:
     void loadData() {
@@ -149,7 +244,7 @@ private:
             numPasses++;
         } while (numTuples != numPreviousTuples);
 
-        ruleEvaluationOutput << endl << "Schemes populated after " << numPasses << " passes through the Rules." << endl;
+        ruleEvaluationOutput << numPasses << " passes: ";
     }
 };
 
